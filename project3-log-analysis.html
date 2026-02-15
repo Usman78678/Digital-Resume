@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Intelligent Log Analysis - Anomaly Detection</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Source+Sans+Pro:wght@300;600;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Source Sans Pro', sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: #fff;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            padding: 40px 20px;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            font-size: 3em;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 10px;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+        }
+
+        .subtitle {
+            font-size: 1.2em;
+            color: #a8d8ea;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            border-color: #4fc3f7;
+        }
+
+        .card-title {
+            font-size: 1.2em;
+            color: #4fc3f7;
+            margin-bottom: 15px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stat-large {
+            font-size: 3em;
+            font-weight: 700;
+            color: #fff;
+            margin: 10px 0;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            color: #a8d8ea;
+        }
+
+        .anomaly-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .anomaly-item {
+            background: rgba(255, 82, 82, 0.2);
+            border-left: 4px solid #ff5252;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .anomaly-item.warning {
+            background: rgba(255, 193, 7, 0.2);
+            border-left-color: #ffc107;
+        }
+
+        .anomaly-time {
+            font-family: 'Courier Prime', monospace;
+            font-size: 0.85em;
+            color: #4fc3f7;
+            margin-bottom: 5px;
+        }
+
+        .anomaly-message {
+            color: #fff;
+            font-size: 0.95em;
+        }
+
+        .anomaly-severity {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.75em;
+            margin-top: 5px;
+            font-weight: 600;
+        }
+
+        .severity-critical {
+            background: #ff5252;
+            color: #fff;
+        }
+
+        .severity-warning {
+            background: #ffc107;
+            color: #000;
+        }
+
+        .chart-container {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            border-radius: 10px;
+            height: 250px;
+            display: flex;
+            align-items: flex-end;
+            gap: 8px;
+        }
+
+        .bar {
+            flex: 1;
+            background: linear-gradient(180deg, #4fc3f7, #1e3c72);
+            border-radius: 5px 5px 0 0;
+            position: relative;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .bar.anomaly {
+            background: linear-gradient(180deg, #ff5252, #c62828);
+        }
+
+        .bar:hover {
+            transform: scaleY(1.1);
+            filter: brightness(1.2);
+        }
+
+        .bar-value {
+            position: absolute;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.75em;
+            color: #a8d8ea;
+            white-space: nowrap;
+        }
+
+        .log-terminal {
+            background: #0d1117;
+            border-radius: 10px;
+            padding: 20px;
+            font-family: 'Courier Prime', monospace;
+            font-size: 0.85em;
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #30363d;
+        }
+
+        .log-entry {
+            padding: 5px 0;
+            color: #8b949e;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .log-entry.error {
+            color: #ff5252;
+        }
+
+        .log-entry.warning {
+            color: #ffc107;
+        }
+
+        .log-entry.info {
+            color: #4fc3f7;
+        }
+
+        .tech-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .badge {
+            background: rgba(79, 195, 247, 0.2);
+            border: 1px solid #4fc3f7;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            color: #4fc3f7;
+            font-weight: 600;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Intelligent Log Analysis</h1>
+            <div class="subtitle">AI-Powered Anomaly Detection System</div>
+        </div>
+
+        <div class="dashboard-grid">
+            <div class="card">
+                <div class="card-title">📈 Logs Processed</div>
+                <div class="stat-large" id="logsProcessed">2.4M</div>
+                <div class="stat-label">Last 24 hours</div>
+            </div>
+            <div class="card">
+                <div class="card-title">⚠️ Anomalies Detected</div>
+                <div class="stat-large" id="anomaliesDetected">147</div>
+                <div class="stat-label">Incidents prevented</div>
+            </div>
+            <div class="card">
+                <div class="card-title">⚡ Response Time</div>
+                <div class="stat-large">-60%</div>
+                <div class="stat-label">Incident response improvement</div>
+            </div>
+            <div class="card">
+                <div class="card-title">🎯 Accuracy</div>
+                <div class="stat-large">94.7%</div>
+                <div class="stat-label">Pattern detection accuracy</div>
+            </div>
+        </div>
+
+        <div class="dashboard-grid" style="grid-template-columns: 2fr 1fr;">
+            <div class="card">
+                <div class="card-title">📉 Hourly Anomaly Detection</div>
+                <div class="chart-container">
+                    <div class="bar" style="height: 40%"><span class="bar-value">12</span></div>
+                    <div class="bar" style="height: 55%"><span class="bar-value">18</span></div>
+                    <div class="bar" style="height: 35%"><span class="bar-value">8</span></div>
+                    <div class="bar anomaly" style="height: 85%"><span class="bar-value">42</span></div>
+                    <div class="bar" style="height: 50%"><span class="bar-value">15</span></div>
+                    <div class="bar anomaly" style="height: 70%"><span class="bar-value">28</span></div>
+                    <div class="bar" style="height: 45%"><span class="bar-value">11</span></div>
+                    <div class="bar" style="height: 38%"><span class="bar-value">9</span></div>
+                    <div class="bar" style="height: 60%"><span class="bar-value">22</span></div>
+                    <div class="bar" style="height: 42%"><span class="bar-value">10</span></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">🎛️ System Health</div>
+                <div style="margin-top: 20px;">
+                    <div style="margin-bottom: 20px;">
+                        <div style="font-size: 0.9em; color: #a8d8ea; margin-bottom: 5px;">CPU Usage</div>
+                        <div style="background: rgba(255,255,255,0.1); height: 8px; border-radius: 4px; overflow: hidden;">
+                            <div style="background: #4fc3f7; height: 100%; width: 45%; transition: width 0.3s;"></div>
+                        </div>
+                    </div>
+                    <div style="margin-bottom: 20px;">
+                        <div style="font-size: 0.9em; color: #a8d8ea; margin-bottom: 5px;">Memory</div>
+                        <div style="background: rgba(255,255,255,0.1); height: 8px; border-radius: 4px; overflow: hidden;">
+                            <div style="background: #4fc3f7; height: 100%; width: 62%; transition: width 0.3s;"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.9em; color: #a8d8ea; margin-bottom: 5px;">Disk I/O</div>
+                        <div style="background: rgba(255,255,255,0.1); height: 8px; border-radius: 4px; overflow: hidden;">
+                            <div style="background: #4fc3f7; height: 100%; width: 38%; transition: width 0.3s;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-grid">
+            <div class="card">
+                <div class="card-title">🚨 Recent Anomalies</div>
+                <div class="anomaly-list" id="anomalyList">
+                    <div class="anomaly-item">
+                        <div class="anomaly-time">2024-02-15 14:23:45</div>
+                        <div class="anomaly-message">Unusual spike in 500 errors detected on auth-service</div>
+                        <span class="anomaly-severity severity-critical">CRITICAL</span>
+                    </div>
+                    <div class="anomaly-item warning">
+                        <div class="anomaly-time">2024-02-15 14:18:12</div>
+                        <div class="anomaly-message">Memory usage threshold exceeded on DB cluster node-3</div>
+                        <span class="anomaly-severity severity-warning">WARNING</span>
+                    </div>
+                    <div class="anomaly-item">
+                        <div class="anomaly-time">2024-02-15 14:12:33</div>
+                        <div class="anomaly-message">Abnormal API response time pattern detected</div>
+                        <span class="anomaly-severity severity-critical">CRITICAL</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">📜 Live Log Stream</div>
+                <div class="log-terminal" id="logTerminal">
+                    <div class="log-entry info">[INFO] System health check completed</div>
+                    <div class="log-entry">[ OK  ] Processing incoming logs from 24 sources</div>
+                    <div class="log-entry warning">[WARN] High traffic detected on endpoint /api/v1/users</div>
+                    <div class="log-entry error">[ERROR] Connection timeout to database replica-2</div>
+                    <div class="log-entry info">[INFO] Anomaly detection model running</div>
+                    <div class="log-entry">[ OK  ] CloudWatch metrics synced</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">🛠️ Technology Stack</div>
+            <div class="tech-badges">
+                <span class="badge">Python</span>
+                <span class="badge">scikit-learn</span>
+                <span class="badge">AWS CloudWatch</span>
+                <span class="badge">ELK Stack</span>
+                <span class="badge">Elasticsearch</span>
+                <span class="badge">Logstash</span>
+                <span class="badge">Kibana</span>
+                <span class="badge">AWS Lambda</span>
+                <span class="badge">Time-Series Analysis</span>
+                <span class="badge">Real-time Processing</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Simulate real-time log updates
+        const logTerminal = document.getElementById('logTerminal');
+        const logs = [
+            { type: 'info', message: '[INFO] Analyzing log patterns...' },
+            { type: '', message: '[ OK  ] Pattern analysis complete' },
+            { type: 'warning', message: '[WARN] Unusual traffic pattern detected' },
+            { type: 'info', message: '[INFO] Triggering automated response' },
+            { type: 'error', message: '[ERROR] Service degradation on payment-api' },
+            { type: '', message: '[ OK  ] Auto-scaling triggered' },
+            { type: 'info', message: '[INFO] Alert sent to ops team' },
+        ];
+
+        let logIndex = 0;
+
+        function addLogEntry() {
+            if (logIndex >= logs.length) logIndex = 0;
+
+            const log = logs[logIndex];
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry ${log.type}`;
+            logEntry.textContent = log.message;
+            
+            logTerminal.appendChild(logEntry);
+            logTerminal.scrollTop = logTerminal.scrollHeight;
+            
+            if (logTerminal.children.length > 8) {
+                logTerminal.removeChild(logTerminal.firstChild);
+            }
+            
+            logIndex++;
+        }
+
+        setInterval(addLogEntry, 3000);
+
+        // Animate counters
+        let logsCount = 2400000;
+        let anomalyCount = 147;
+
+        setInterval(() => {
+            logsCount += Math.floor(Math.random() * 100);
+            anomalyCount += Math.random() > 0.7 ? 1 : 0;
+            
+            document.getElementById('logsProcessed').textContent = 
+                (logsCount / 1000000).toFixed(1) + 'M';
+            document.getElementById('anomaliesDetected').textContent = anomalyCount;
+        }, 5000);
+    </script>
+</body>
+</html>
